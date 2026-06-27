@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sandworm Overlay</title>
+    <script type="module" src="/main.js" defer></script>
+  </head>
+
+  <body>
+    <div id="panel">
+      <!-- full-window drag handle: only active while holding Ctrl+Alt+D -->
+      <div id="draglayer" data-tauri-drag-region>
+        <span class="draghint" data-tauri-drag-region>⠿ drag to move</span>
+      </div>
+
+      <!-- DIAL -->
+      <div id="dialView" class="view">
+        <div class="dialbox">
+          <svg id="dial" width="280" height="280" viewBox="0 0 300 300"></svg>
+          <div class="center">
+            <div class="zone"><span class="swatch" id="d-swatch"></span><span id="d-zone">–</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BAR -->
+      <div id="barView" class="view" hidden>
+        <div class="barbox">
+          <div class="seglabel">SEGMENT <b id="b-seg">–</b></div>
+          <div class="segbar" id="segbar"></div>
+          <div class="ruler" id="ruler"></div>
+          <div class="barcap"><span>start</span><span>one lap = 2:30</span><span>end</span></div>
+        </div>
+      </div>
+
+      <!-- first-run hint, auto-fades -->
+      <div id="firsthint">
+        <b>Sandworm Overlay</b><br />
+        Loops every <b>2:30</b>. When you land, note where the marker is —
+        bail when it comes back round.<br />
+        Hold <span>Ctrl+Alt+D</span> to drag · <span>Ctrl+Alt+M</span> dial/bar ·
+        <span>Ctrl+Alt+X</span> quit
+      </div>
+    </div>
+  </body>
+</html>

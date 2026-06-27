@@ -1,0 +1,64 @@
+name: build
+
+# Build Windows + macOS installers.
+#  - Push a tag like v0.1.0  -> builds and attaches installers to a draft GitHub Release.
+#  - Run manually (Actions -> build -> Run workflow) -> builds and uploads installers
+#    as downloadable run artifacts (no tag/release needed).
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+          - platform: macos-latest
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./sandworm-overlay/src-tauri -> target"
+
+      - name: Install frontend dependencies
+        working-directory: ./sandworm-overlay
+        run: npm install
+
+      - name: Build the app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: ./sandworm-overlay
+          # Only create a release when triggered by a version tag.
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          releaseName: "Sandworm Overlay ${{ github.ref_name }}"
+          releaseDraft: true
+          prerelease: false
+
+      - name: Upload installers as run artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sandworm-overlay-${{ matrix.platform }}
+          if-no-files-found: warn
+          path: |
+            sandworm-overlay/src-tauri/target/release/bundle/**
+            sandworm-overlay/src-tauri/target/*/release/bundle/**

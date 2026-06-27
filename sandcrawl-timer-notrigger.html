@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sand Crawl Timer — No-trigger concepts</title>
+<style>
+  :root{
+    --sand:#e8d3a2; --sand-dim:#9c8a63; --spice:#ff7a18;
+    --safe:#39d98a; --warn:#f2b705; --danger:#ff4d3d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Segoe UI",system-ui,sans-serif;color:var(--sand);
+    background:radial-gradient(120% 80% at 50% -10%,#2a2114 0%,#0c0a06 55%,#050403 100%);
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:38px 24px 80px}
+  h1{font-size:25px}
+  header p{color:var(--sand-dim);margin-top:8px;max-width:760px;line-height:1.55;font-size:14px}
+  .families{display:flex;gap:14px;margin-top:18px;flex-wrap:wrap}
+  .fam{flex:1;min-width:280px;border:1px solid #2c2417;border-radius:12px;padding:14px 16px;background:#100c07}
+  .fam b{color:var(--spice)}
+  .fam p{font-size:12.5px;color:var(--sand-dim);line-height:1.5;margin-top:6px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;margin-top:30px}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,#16120b,#0d0a06);border:1px solid #2c2417;border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+  .label{display:flex;justify-content:space-between;align-items:center;padding:13px 18px;border-bottom:1px solid #241d12}
+  .label h2{font-size:15px;font-weight:600}
+  .label .tag{font-size:11px;color:var(--sand-dim)}
+  .stage{height:300px;position:relative;background:#070502;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .desc{padding:12px 18px;font-size:12.5px;line-height:1.5;color:var(--sand-dim);border-top:1px solid #241d12}
+  .desc b{color:var(--sand)}
+  kbd{background:#241d12;border:1px solid #3a2f1c;border-radius:5px;padding:1px 6px;font-size:11px}
+
+  /* A: dual clock */
+  .dual{display:flex;flex-direction:column;align-items:center;gap:4px;font-variant-numeric:tabular-nums}
+  .dual .nowrow{font-size:14px;letter-spacing:2px;color:var(--sand-dim)}
+  .dual .wormlbl{font-size:13px;letter-spacing:6px;color:var(--spice);margin-top:14px}
+  .dual .wormtime{font-size:66px;font-weight:800;line-height:1;color:var(--sand);text-shadow:0 0 26px rgba(255,122,24,.35)}
+  .dual .note{font-size:11px;color:var(--sand-dim);margin-top:12px;letter-spacing:1px}
+
+  /* B: sweep dial */
+  .dial-svg .face{fill:#0c0904;stroke:#2c2417;stroke-width:2}
+  .dial-svg .tick{stroke:#3a2f1c;stroke-width:2}
+  .dial-svg .tickmaj{stroke:#6b5836;stroke-width:3}
+  .dial-svg text{fill:var(--sand-dim);font-size:9px;font-family:inherit}
+  .dial-cap{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:11px;color:var(--sand-dim);letter-spacing:2px}
+
+  /* C: ribbon */
+  .ribbon{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center}
+  .ribbon .track{position:relative;height:120px;border-top:1px solid #241d12;border-bottom:1px solid #241d12;overflow:hidden}
+  .ribbon .ticks{position:absolute;inset:0}
+  .ribbon .tk{position:absolute;top:0;bottom:0;width:1px;background:#241d12}
+  .ribbon .tk.maj{background:#3a2f1c}
+  .ribbon .tk span{position:absolute;top:6px;left:4px;font-size:9px;color:var(--sand-dim);font-variant-numeric:tabular-nums}
+  .ribbon .window{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,rgba(57,217,138,.16),rgba(242,183,5,.16) 70%,rgba(255,77,61,.22));border-left:2px solid var(--safe)}
+  .ribbon .nowline{position:absolute;top:-6px;bottom:-6px;width:2px;background:var(--sand)}
+  .ribbon .nowtri{position:absolute;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:9px solid var(--sand)}
+  .ribbon .worm{position:absolute;top:0;bottom:0;width:2px;background:var(--danger)}
+  .ribbon .worm .fin{position:absolute;top:-2px;left:4px;font-size:18px}
+  .ribbon .worm .wt{position:absolute;bottom:6px;left:5px;font-size:10px;color:var(--danger);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ribbon .legend{position:absolute;top:10px;left:14px;font-size:10px;color:var(--sand-dim);letter-spacing:2px}
+
+  /* D: loop bar */
+  .loop{width:78%;display:flex;flex-direction:column;gap:10px}
+  .loop .barwrap{height:42px;border:1px solid #2c2417;border-radius:8px;overflow:hidden;position:relative;background:#0c0904}
+  .loop .bf{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--safe),var(--warn) 78%,var(--danger));transform-origin:left;transition:transform .12s linear}
+  .loop .marks{position:absolute;inset:0;display:flex}
+  .loop .marks i{flex:1;border-right:1px solid rgba(0,0,0,.4)}
+  .loop .head{position:absolute;top:-3px;bottom:-3px;width:3px;background:#fff;box-shadow:0 0 10px #fff}
+  .loop .cap{display:flex;justify-content:space-between;font-size:11px;color:var(--sand-dim);letter-spacing:1px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🪱 No-trigger sand crawl displays</h1>
+    <p>All four run on their own forever — nothing to press. The hard truth: with no input the app can't know <i>when you landed</i>, so the "start" happens in your eyes. These minimise how much you have to hold in your head.</p>
+    <div class="families">
+      <div class="fam"><b>Family 1 · Read the future</b><p>App always shows the wall-clock instant the worm arrives if you started now. Glance once on landing, read it, watch a clock reach it. → <b style="color:var(--sand)">A, C</b></p></div>
+      <div class="fam"><b>Family 2 · Phase-lock loop</b><p>A marker loops once every 2:30, forever. Land, note where it is, bail when it comes back. Loop period = your safe window, so "same spot again" = exactly 2:30 — pure spatial recognition, no numbers. → <b style="color:var(--sand)">B, D</b></p></div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- A -->
+    <div class="card">
+      <div class="label"><h2>A · WORM-AT dual clock</h2><span class="tag">read the future · lowest tech</span></div>
+      <div class="stage">
+        <div class="dual">
+          <div class="nowrow">NOW · <span id="a-now">--:--:--</span></div>
+          <div class="wormlbl">WORM AT</div>
+          <div class="wormtime" id="a-worm">--:--:--</div>
+          <div class="note">always = now + 2:30 · glance once, remember it</div>
+        </div>
+      </div>
+      <div class="desc">Dead simple. The big number is just <b>current time + 2:30</b>, ticking live. You glance the instant you land, read the worm time, then keep half an eye on a clock. One number to hold.</div>
+    </div>
+
+    <!-- B -->
+    <div class="card">
+      <div class="label"><h2>B · 2:30 sweep dial</h2><span class="tag">phase-lock · best "rolling" feel</span></div>
+      <div class="stage">
+        <svg class="dial-svg" id="b-svg" width="210" height="210" viewBox="0 0 210 210"></svg>
+        <div class="dial-cap">one full sweep = 2:30 · note the dot, go when it returns</div>
+      </div>
+      <div class="desc">A hand sweeps the circle once every 2:30. Land → clock where the glowing dot sits ("near the 3"). When it laps back to that spot, the window's up. <b>No number to remember</b> — just a position. The comet trail shows how far it's travelled.</div>
+    </div>
+
+    <!-- C -->
+    <div class="card">
+      <div class="label"><h2>C · Scrolling time ribbon</h2><span class="tag">read the future · spatial</span></div>
+      <div class="stage">
+        <div class="ribbon">
+          <div class="legend">◀ PAST · FUTURE ▶</div>
+          <div class="track" id="c-track">
+            <div class="ticks" id="c-ticks"></div>
+            <div class="window" id="c-window"></div>
+            <div class="worm" id="c-worm"><span class="fin">🪱</span><span class="wt" id="c-wt"></span></div>
+            <div class="nowline" id="c-nowline"></div>
+            <div class="nowtri" id="c-nowtri"></div>
+          </div>
+        </div>
+      </div>
+      <div class="desc">Absolute-time ruler scrolls left. A fixed <b>NOW</b> line, with a 2:30 shaded "spice window" projecting into the future to a <b>🪱 worm fin</b>. Glance the fin's time on landing; you also <i>see</i> the gap to NOW shrink as you crawl.</div>
+    </div>
+
+    <!-- D -->
+    <div class="card">
+      <div class="label"><h2>D · Phase-lock loop bar</h2><span class="tag">phase-lock · linear</span></div>
+      <div class="stage">
+        <div class="loop">
+          <div class="barwrap">
+            <div class="bf" id="d-fill"></div>
+            <div class="marks"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="head" id="d-head"></div>
+          </div>
+          <div class="cap"><span>0:00</span><span id="d-phase">loops every 2:30</span><span>2:30</span></div>
+        </div>
+      </div>
+      <div class="desc">Same idea as the dial but a straight bar: the white head sweeps 0→2:30 then snaps back, forever. Land → note where the head is; when it returns to that mark, exactly 2:30 has passed. Easiest to pin along a screen edge.</div>
+    </div>
+  </div>
+
+  <footer style="margin-top:46px;color:var(--sand-dim);font-size:12.5px;line-height:1.6">
+    My pick for "glance, no interaction, rolling": <b style="color:var(--sand)">B (sweep dial)</b> — phase-lock kills the memory-of-a-number problem and it's the nicest to read in peripheral vision. <b style="color:var(--sand)">A</b> is the no-nonsense backup. Tell me your favourite and I'll build the real transparent always-on-top overlay (configurable window, optional soft tick/chime as the dot nears your landing spot).
+  </footer>
+</div>
+
+<script>
+const WIN = 150; // 2:30 safe window in seconds
+
+function hms(d){return d.toLocaleTimeString([], {hour12:false});}
+
+/* ---- A: dual clock ---- */
+function tickA(){
+  const now = new Date();
+  document.getElementById('a-now').textContent = hms(now);
+  document.getElementById('a-worm').textContent = hms(new Date(now.getTime()+WIN*1000));
+}
+
+/* ---- B: sweep dial (period = WIN) ---- */
+const bsvg = document.getElementById('b-svg');
+(function buildDial(){
+  const cx=105,cy=105,R=92;
+  let ns='http://www.w3.org/2000/svg';
+  let face=document.createElementNS(ns,'circle');
+  face.setAttribute('cx',cx);face.setAttribute('cy',cy);face.setAttribute('r',R);
+  face.setAttribute('class','face');bsvg.appendChild(face);
+  // 10 ticks (every 15s)
+  for(let i=0;i<30;i++){
+    const a=(i/30)*2*Math.PI - Math.PI/2;
+    const maj=i%5===0;
+    const r1=maj?R-12:R-7, r2=R-2;
+    const ln=document.createElementNS(ns,'line');
+    ln.setAttribute('x1',cx+r1*Math.cos(a));ln.setAttribute('y1',cy+r1*Math.sin(a));
+    ln.setAttribute('x2',cx+r2*Math.cos(a));ln.setAttribute('y2',cy+r2*Math.sin(a));
+    ln.setAttribute('class',maj?'tickmaj':'tick');bsvg.appendChild(ln);
+    if(maj){
+      const sec=Math.round((i/30)*WIN);
+      const tr=R-26;
+      const tx=document.createElementNS(ns,'text');
+      tx.setAttribute('x',cx+tr*Math.cos(a));tx.setAttribute('y',cy+tr*Math.sin(a)+3);
+      tx.setAttribute('text-anchor','middle');
+      tx.textContent=(Math.floor(sec/60))+':'+String(sec%60).padStart(2,'0');
+      bsvg.appendChild(tx);
+    }
+  }
+  // trail (many segments faded), hand, dot
+  for(let i=0;i<24;i++){
+    const seg=document.createElementNS(ns,'circle');
+    seg.setAttribute('r',3.2);seg.setAttribute('class','trailseg');
+    seg.setAttribute('fill','#ff7a18');seg.setAttribute('opacity',(1-i/24)*0.5);
+    seg.dataset.k=i;bsvg.appendChild(seg);
+  }
+  const hand=document.createElementNS(ns,'line');
+  hand.setAttribute('id','b-hand');hand.setAttribute('stroke','#e8d3a2');
+  hand.setAttribute('stroke-width','2.5');hand.setAttribute('stroke-linecap','round');
+  bsvg.appendChild(hand);
+  const dot=document.createElementNS(ns,'circle');
+  dot.setAttribute('id','b-dot');dot.setAttribute('r','7');dot.setAttribute('fill','#ff7a18');
+  dot.style.filter='drop-shadow(0 0 8px #ff7a18)';bsvg.appendChild(dot);
+  const hub=document.createElementNS(ns,'circle');
+  hub.setAttribute('cx',cx);hub.setAttribute('cy',cy);hub.setAttribute('r','5');
+  hub.setAttribute('fill','#6b5836');bsvg.appendChild(hub);
+})();
+function tickB(){
+  const cx=105,cy=105,R=80;
+  const ms=Date.now()%(WIN*1000);
+  const frac=ms/(WIN*1000);
+  const a=frac*2*Math.PI - Math.PI/2;
+  const dx=cx+R*Math.cos(a), dy=cy+R*Math.sin(a);
+  const hand=document.getElementById('b-hand');
+  hand.setAttribute('x1',cx);hand.setAttribute('y1',cy);
+  hand.setAttribute('x2',dx);hand.setAttribute('y2',dy);
+  document.getElementById('b-dot').setAttribute('cx',dx);
+  document.getElementById('b-dot').setAttribute('cy',dy);
+  bsvg.querySelectorAll('.trailseg').forEach(seg=>{
+    const k=+seg.dataset.k;
+    const aa=(frac - k*0.012)*2*Math.PI - Math.PI/2;
+    seg.setAttribute('cx',cx+R*Math.cos(aa));
+    seg.setAttribute('cy',cy+R*Math.sin(aa));
+  });
+}
+
+/* ---- C: ribbon ---- */
+const PXPS=2.0; // px per second
+const cTrack=document.getElementById('c-track');
+const cTicks=document.getElementById('c-ticks');
+const NOWX=0.28; // now line at 28% from left
+(function buildTicks(){
+  for(let i=0;i<60;i++){
+    const d=document.createElement('div');
+    d.className='tk'+(i%5===0?' maj':'');
+    if(i%5===0){const s=document.createElement('span');s.dataset.i=i;d.appendChild(s);}
+    cTicks.appendChild(d);
+  }
+})();
+function tickC(){
+  const w=cTrack.clientWidth;
+  const nowX=w*NOWX;
+  const now=Date.now()/1000;
+  document.getElementById('c-nowline').style.left=nowX+'px';
+  document.getElementById('c-nowtri').style.left=(nowX-7)+'px';
+  document.getElementById('c-nowtri').style.top='-4px';
+  // worm at now+WIN -> to the right of now by WIN*PXPS
+  const wormX=nowX+WIN*PXPS;
+  const win=document.getElementById('c-window');
+  win.style.left=nowX+'px';win.style.width=(WIN*PXPS)+'px';
+  const wm=document.getElementById('c-worm');wm.style.left=wormX+'px';
+  document.getElementById('c-wt').textContent=hms(new Date((now+WIN)*1000));
+  // ticks every 15s; position by absolute time so they scroll
+  const ticks=cTicks.children;
+  for(let i=0;i<ticks.length;i++){
+    const tk=ticks[i];
+    // each tick represents a 15s-spaced absolute mark; choose nearest set
+    const baseT=Math.floor(now/15)*15;
+    const tT=baseT + (i-20)*15;
+    const x=nowX+(tT-now)*PXPS;
+    tk.style.left=x+'px';
+    const sp=tk.querySelector('span');
+    if(sp){const dd=new Date(tT*1000);sp.textContent=dd.toLocaleTimeString([], {hour12:false,minute:'2-digit',second:'2-digit'});}
+  }
+}
+
+/* ---- D: loop bar ---- */
+function tickD(){
+  const frac=(Date.now()%(WIN*1000))/(WIN*1000);
+  document.getElementById('d-fill').style.transform='scaleX('+frac+')';
+  document.getElementById('d-head').style.left=(frac*100)+'%';
+}
+
+function loop(){tickA();tickB();tickC();tickD();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>

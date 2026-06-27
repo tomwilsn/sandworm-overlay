@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sand Crawl — Phase-lock position aids</title>
+<style>
+  :root{--sand:#e8d3a2;--sand-dim:#9c8a63;--spice:#ff7a18}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:"Segoe UI",system-ui,sans-serif;color:var(--sand);
+    background:radial-gradient(120% 80% at 50% -10%,#2a2114 0%,#0c0a06 55%,#050403 100%);
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:38px 24px 80px}
+  h1{font-size:25px}
+  header p{color:var(--sand-dim);margin-top:8px;max-width:780px;line-height:1.55;font-size:14px}
+  header p b{color:var(--sand)}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;margin-top:30px}
+  @media(max-width:920px){.grid{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,#16120b,#0d0a06);border:1px solid #2c2417;border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+  .label{display:flex;justify-content:space-between;align-items:center;padding:13px 18px;border-bottom:1px solid #241d12}
+  .label h2{font-size:15px;font-weight:600}
+  .label .tag{font-size:11px;color:var(--sand-dim)}
+  .stage{min-height:360px;position:relative;background:#070502;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:18px}
+  .desc{padding:12px 18px;font-size:12.5px;line-height:1.5;color:var(--sand-dim);border-top:1px solid #241d12}
+  .desc b{color:var(--sand)}
+
+  /* dial center readout */
+  .dialbox{position:relative;width:300px;height:300px}
+  .dialbox svg{position:absolute;inset:0}
+  .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+  .center .lz{font-size:11px;letter-spacing:4px;color:var(--sand-dim)}
+  .center .zone{font-size:58px;font-weight:800;line-height:1;display:flex;align-items:center;gap:10px}
+  .center .swatch{width:26px;height:26px;border-radius:6px;border:2px solid rgba(255,255,255,.5)}
+  .center .hint{font-size:10.5px;letter-spacing:2px;color:var(--sand-dim);margin-top:6px}
+
+  /* linear bar */
+  .barbox{width:92%;display:flex;flex-direction:column;gap:14px}
+  .segbar{height:64px;display:flex;border-radius:10px;overflow:hidden;border:1px solid #2c2417;position:relative}
+  .segbar .seg{flex:1;display:flex;align-items:flex-end;justify-content:center;position:relative;border-right:1px solid rgba(0,0,0,.35)}
+  .segbar .seg span{font-size:11px;font-weight:700;color:rgba(0,0,0,.6);margin-bottom:4px}
+  .segbar .head{position:absolute;top:-5px;bottom:-5px;width:4px;background:#fff;box-shadow:0 0 12px #fff,0 0 4px #fff;border-radius:2px}
+  .segbar .headlabel{position:absolute;top:-26px;transform:translateX(-50%);font-size:12px;font-weight:800;background:#fff;color:#111;padding:1px 8px;border-radius:5px;white-space:nowrap}
+  .ruler{height:18px;position:relative}
+  .ruler .rt{position:absolute;top:0;width:1px;height:6px;background:#3a2f1c}
+  .ruler .rt.maj{height:11px;background:#6b5836}
+  .barcap{display:flex;justify-content:space-between;font-size:11px;color:var(--sand-dim)}
+  .barcap b{color:var(--sand)}
+
+  footer{margin-top:46px;color:var(--sand-dim);font-size:12.5px;line-height:1.65}
+  footer b{color:var(--sand)}
+  .key{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:12px;color:var(--sand-dim)}
+  .key div{display:flex;align-items:center;gap:7px}
+  .key i{width:12px;height:12px;border-radius:3px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🪱 Phase-lock — with position-memory aids</h1>
+    <p>Both loop once every <b>2:30</b>, forever, no input. The upgrade over a plain sweep: every position is made <b>unique</b> by colour + number + ticks, so when you land you grab a landmark ("dot's in the <b>orange 4</b>") instead of a vague angle. Bail when the marker returns to it. <b>Colour = position here, not danger</b> — the whole loop is safe until it laps.</p>
+  </header>
+
+  <div class="grid">
+    <!-- DIAL -->
+    <div class="card">
+      <div class="label"><h2>Spice Dial · 12 colour zones</h2><span class="tag">hue + clock number + 60 ticks</span></div>
+      <div class="stage">
+        <div class="dialbox">
+          <svg id="dial" width="300" height="300" viewBox="0 0 300 300"></svg>
+          <div class="center">
+            <div class="lz">LANDED IN ZONE</div>
+            <div class="zone"><span class="swatch" id="d-swatch"></span><span id="d-zone">4</span></div>
+            <div class="hint" id="d-sub">remember the colour + number</div>
+          </div>
+        </div>
+      </div>
+      <div class="desc">A hue wheel split into 12 named zones. The glowing dot <b>takes on the colour of the zone it's in</b>, and the centre prints that zone live. Land → note "<b>teal 11</b>" (or just the colour). When the dot is teal-in-11 again, the worm's due. Comet trail shows travel.</div>
+    </div>
+
+    <!-- BAR -->
+    <div class="card">
+      <div class="label"><h2>Spice Bar · 15 colour segments</h2><span class="tag">edge-mountable</span></div>
+      <div class="stage">
+        <div class="barbox">
+          <div class="segbar" id="segbar"></div>
+          <div class="ruler" id="ruler"></div>
+          <div class="barcap"><span>start</span><span>head is in segment <b id="b-seg">6</b></span><span>2:30</span></div>
+        </div>
+      </div>
+      <div class="desc">The linear version — same colour+number coding across 15 segments (10s each) with a fine tick ruler. The white head carries a label of its current segment. Thin enough to pin along your screen's bottom edge; you remember "<b>seg 9</b>" and watch for the head to come round to it.</div>
+    </div>
+  </div>
+
+  <footer>
+    The trick in both: a uniform ring/bar is hard to recall because every spot looks alike — so I made <b>each spot a distinct landmark</b>. Three redundant cues (colour, number, tick density) mean whichever one your eye caught on landing is enough to re-find it.
+    <div class="key">
+      <div><i style="background:#fff"></i> moving head/dot = NOW in the loop</div>
+      <div><i style="background:var(--spice)"></i> coloured zones = position landmarks</div>
+      <div>one full lap = your 2:30 window</div>
+    </div>
+    <p style="margin-top:16px">Want me to push one of these to a real transparent always-on-top overlay? I can also add an optional <b>soft tick that speeds up</b> as the dot nears your landing zone, or a faint "<b>ghost</b>" of where the dot was N seconds ago.</p>
+  </footer>
+</div>
+
+<script>
+const WIN=150, ZONES=12, SEGS=15;
+const ns='http://www.w3.org/2000/svg';
+function zoneHue(i){return Math.round((i/ZONES)*360);}
+function zoneColor(i,l){return `hsl(${zoneHue(i)},68%,${l||55}%)`;}
+
+/* ===== DIAL ===== */
+const dial=document.getElementById('dial');
+const CX=150,CY=150;
+(function build(){
+  // 12 coloured annular segments
+  const r=112, sw=30, C=2*Math.PI*r, seg=C/ZONES, gap=5;
+  for(let i=0;i<ZONES;i++){
+    const c=document.createElementNS(ns,'circle');
+    c.setAttribute('cx',CX);c.setAttribute('cy',CY);c.setAttribute('r',r);
+    c.setAttribute('fill','none');c.setAttribute('stroke',zoneColor(i,42));
+    c.setAttribute('stroke-width',sw);
+    c.setAttribute('stroke-dasharray',`${seg-gap} ${C-(seg-gap)}`);
+    c.setAttribute('stroke-dashoffset',-(i*seg)+gap/2);
+    c.setAttribute('transform',`rotate(-90 ${CX} ${CY})`);
+    c.dataset.zi=i;c.classList.add('zoneseg');
+    dial.appendChild(c);
+  }
+  // 60 minor ticks
+  for(let i=0;i<60;i++){
+    const a=(i/60)*2*Math.PI-Math.PI/2, maj=i%5===0;
+    const r1=maj?86:92, r2=96;
+    const ln=document.createElementNS(ns,'line');
+    ln.setAttribute('x1',CX+r1*Math.cos(a));ln.setAttribute('y1',CY+r1*Math.sin(a));
+    ln.setAttribute('x2',CX+r2*Math.cos(a));ln.setAttribute('y2',CY+r2*Math.sin(a));
+    ln.setAttribute('stroke',maj?'#8a7448':'#3a2f1c');ln.setAttribute('stroke-width',maj?2.4:1.2);
+    dial.appendChild(ln);
+  }
+  // zone numbers 1..12 at sector centres
+  for(let i=0;i<ZONES;i++){
+    const a=((i+0.5)/ZONES)*2*Math.PI-Math.PI/2, tr=68;
+    const t=document.createElementNS(ns,'text');
+    t.setAttribute('x',CX+tr*Math.cos(a));t.setAttribute('y',CY+tr*Math.sin(a)+5);
+    t.setAttribute('text-anchor','middle');t.setAttribute('font-size','15');
+    t.setAttribute('font-weight','800');t.setAttribute('fill',zoneColor(i,72));
+    t.textContent=i+1;dial.appendChild(t);
+  }
+  // trail
+  for(let i=0;i<26;i++){
+    const s=document.createElementNS(ns,'circle');
+    s.setAttribute('r',3.4);s.classList.add('trail');
+    s.dataset.k=i;dial.appendChild(s);
+  }
+  // dot
+  const dot=document.createElementNS(ns,'circle');
+  dot.setAttribute('id','d-dot');dot.setAttribute('r',9);
+  dot.setAttribute('stroke','#fff');dot.setAttribute('stroke-width',2.5);
+  dial.appendChild(dot);
+  const hub=document.createElementNS(ns,'circle');
+  hub.setAttribute('cx',CX);hub.setAttribute('cy',CY);hub.setAttribute('r',5);
+  hub.setAttribute('fill','#6b5836');dial.appendChild(hub);
+})();
+function tickDial(){
+  const r=112;
+  const frac=(Date.now()%(WIN*1000))/(WIN*1000);
+  const a=frac*2*Math.PI-Math.PI/2;
+  const zi=Math.floor(frac*ZONES)%ZONES;
+  const col=zoneColor(zi,58);
+  const dx=CX+r*Math.cos(a), dy=CY+r*Math.sin(a);
+  const dot=document.getElementById('d-dot');
+  dot.setAttribute('cx',dx);dot.setAttribute('cy',dy);dot.setAttribute('fill',col);
+  dot.style.filter=`drop-shadow(0 0 9px ${col})`;
+  // highlight active zone segment
+  dial.querySelectorAll('.zoneseg').forEach(s=>{
+    s.setAttribute('stroke',zoneColor(+s.dataset.zi, +s.dataset.zi===zi?60:42));
+  });
+  // trail
+  dial.querySelectorAll('.trail').forEach(s=>{
+    const k=+s.dataset.k, aa=(frac-k*0.011)*2*Math.PI-Math.PI/2;
+    s.setAttribute('cx',CX+r*Math.cos(aa));s.setAttribute('cy',CY+r*Math.sin(aa));
+    s.setAttribute('fill',col);s.setAttribute('opacity',(1-k/26)*0.45);
+  });
+  document.getElementById('d-zone').textContent=zi+1;
+  document.getElementById('d-swatch').style.background=col;
+}
+
+/* ===== BAR ===== */
+const segbar=document.getElementById('segbar');
+const ruler=document.getElementById('ruler');
+(function build(){
+  for(let i=0;i<SEGS;i++){
+    const d=document.createElement('div');d.className='seg';
+    d.style.background=zoneColor(i*ZONES/SEGS,46);
+    const s=document.createElement('span');s.textContent=i+1;d.appendChild(s);
+    segbar.appendChild(d);
+  }
+  const head=document.createElement('div');head.className='head';head.id='b-head';segbar.appendChild(head);
+  const lab=document.createElement('div');lab.className='headlabel';lab.id='b-headlabel';segbar.appendChild(lab);
+  // ruler: tick every 5s (30 ticks), major every 30s
+  for(let i=0;i<=30;i++){
+    const t=document.createElement('div');t.className='rt'+(i%6===0?' maj':'');
+    t.style.left=(i/30*100)+'%';ruler.appendChild(t);
+  }
+})();
+function tickBar(){
+  const frac=(Date.now()%(WIN*1000))/(WIN*1000);
+  const seg=Math.min(SEGS,Math.floor(frac*SEGS)+1);
+  document.getElementById('b-head').style.left=(frac*100)+'%';
+  const lab=document.getElementById('b-headlabel');
+  lab.style.left=(frac*100)+'%';lab.textContent='seg '+seg;
+  document.getElementById('b-seg').textContent=seg;
+}
+
+function loop(){tickDial();tickBar();requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>
