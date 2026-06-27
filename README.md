@@ -7,6 +7,10 @@ sand crawling. It runs a **phase-lock loop timer** that cycles once every **2:30
 No start button: when you land, note where the marker is, and bail when it loops
 back round to the same spot. One full lap is exactly 2:30, wherever you landed.
 
+> ⚠️ **Disclaimer:** This is 100% AI-coded slop. I (the repo owner) have never read
+> a single line of it and have no intention of starting. It was vibe-coded end to
+> end by an LLM. Run it at your own risk — no warranty, no support, no idea. 🤖🏜️
+
 The app lives in **[`sandworm-overlay/`](./sandworm-overlay)** — see its
 [README](./sandworm-overlay/README.md) for controls, build steps, and tuning.
 
