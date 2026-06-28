@@ -28,8 +28,16 @@ density) so whichever cue your eye caught on landing is enough to re-find it.
 | `Ctrl+Alt+X` | Quit                                                                                       |
 
 By default the window is **click-through** (clicks pass to the game) and parked
-top-right. Press `Ctrl+Alt+O` to grab and drag it where you want, then press it
-again to re-lock as a pure overlay.
+top-right. Hold `Ctrl+Alt+D` and drag with the mouse to reposition it, then
+release to re-lock as a pure overlay.
+
+### Tray (menu-bar) icon
+
+The app is hidden from the dock/taskbar to stay out of the way, so it lives in
+the **system tray / menu bar** instead. Click the icon for a menu:
+
+- **Switch dial / bar**
+- **Quit Sandworm Overlay** — the easy way to close it (besides `Ctrl+Alt+X`)
 
 ## Run it
 

@@ -14,7 +14,7 @@
         "title": "Sandworm Overlay",
         "label": "main",
         "width": 380,
-        "height": 460,
+        "height": 380,
         "transparent": true,
         "decorations": false,
         "alwaysOnTop": true,

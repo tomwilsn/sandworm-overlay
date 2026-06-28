@@ -1,3 +1,5 @@
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::tray::TrayIconBuilder;
 use tauri::{Emitter, Manager, PhysicalPosition};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
@@ -73,6 +75,45 @@ pub fn run() {
             gs.register(hold_drag.clone())?;
             gs.register(switch_mode.clone())?;
             gs.register(quit_app.clone())?;
+
+            // System-tray (menu-bar) icon so the app is always closeable even
+            // though it's hidden from the dock/taskbar.
+            let switch_item =
+                MenuItem::with_id(app, "switch", "Switch dial / bar", true, None::<&str>)?;
+            let move_item = MenuItem::with_id(
+                app,
+                "move_hint",
+                "Reposition: hold Ctrl+Alt+D and drag",
+                false,
+                None::<&str>,
+            )?;
+            let quit_item =
+                MenuItem::with_id(app, "quit", "Quit Sandworm Overlay", true, None::<&str>)?;
+            let menu = Menu::with_items(
+                app,
+                &[
+                    &switch_item,
+                    &move_item,
+                    &PredefinedMenuItem::separator(app)?,
+                    &quit_item,
+                ],
+            )?;
+
+            TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("Sandworm Overlay")
+                .menu(&menu)
+                .show_menu_on_left_click(true)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "switch" => {
+                        if let Some(win) = app.get_webview_window("main") {
+                            let _ = win.emit("switch-mode", ());
+                        }
+                    }
+                    "quit" => app.exit(0),
+                    _ => {}
+                })
+                .build(app)?;
 
             Ok(())
         })
